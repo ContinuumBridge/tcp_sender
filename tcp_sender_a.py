@@ -31,7 +31,7 @@ config = {
     "battery_min_change": 1.0,
     "connected": "True",
     "slow_polling_interval": 600.0,
-    "TCPport": "5003"
+    "TCPport": 5003
 }
 
 import sys
@@ -42,36 +42,34 @@ from cbconfig import *
 import requests
 import json
 from twisted.internet import reactor
+from twisted.internet.protocol import Protocol, Factory
+from twisted.protocols.basic import LineReceiver
 import smtplib
 
-# For entry/exit
-MAX_INTERVAL                      = 30*60 # Will post values after this even if they haven't changed
+MAX_INTERVAL                      = 10*60 # Will post values after this even if they haven't changed
 
 class DataManager:
     """ Managers data storage for all sensors """
     def __init__(self, bridge_id, idToName):
         self.idToName = idToName
         self.baseAddress = bridge_id + "/"
-        self.s = []
-        self.waiting = False
+        self.enable = False
+
+    def openSocket(self):
         try:
-            self.socFactory = CbServerFactory(self.onTCP)
-            reactor.listenTCP(config["TCPport"], self.socFactory)
+            self.socFactory = ServerFactory(self.onTCP)
+            reactor.listenTCP(config["TCPport"], self.socFactory, backlog=4)
+            self.cbLog("info", "DataManager. Listening on TCP socket " + str(config["TCPport"]))
         except Exception as ex:
             self.cbLog("warning", "DataManager. Unable to create TCP socket")
             self.cbLog("warning", "Exception: " + str(type(ex)) + str(ex.args))
 
-    def onTCP(selfi, message):
-        if not "status" in message:
-            self.cbLog("warning", "Data manager, onTCP. Message received with no status key: " + str(msg))
-        else:
-            if message["status"] == "enable":
-                self.enable = True
-            else:
-                self.enable = False
+    def onTCP(self, message):
+        self.cbLog("debug", "Data manager, onTCP. Message received: " + str(message))
 
     def storeValues(self, values):
-        if self.enable:
+        if True:
+        #if self.enable:
             try:
                 msg = {"m": "data",
                        "d": values
@@ -156,7 +154,7 @@ class DataManager:
         self.storeValues(values)
 
     def storeActivity(self, location, timeStamp, action, v):
-        values = {"name": self.baseAddress + location + "/" + action,
+        values = {"name": self.BaseAddress + location + "/" + action,
                   "points": [[int(timeStamp*1000), v]]
                  }
         self.storeValues(values)
@@ -279,7 +277,6 @@ class Binary():
             bi = 0
         if bi != self.previous:
             if timeStamp != self.previousTime:
-                self.dm.storeBinary(self.id, timeStamp-1.0, self.previous)
                 self.dm.storeBinary(self.id, timeStamp, bi)
                 self.previous = bi
                 self.previousTime = timeStamp
@@ -292,12 +289,17 @@ class Luminance():
 
     def processLuminance(self, resp):
         self.cbLog("debug", "processLuminance: " + self.id + " - " + str(resp))
-        v = resp["data"]
-        timeStamp = resp["timeStamp"] 
-        if abs(v-self.previous) >= config["luminance_min_change"] or timeStamp - self.prevTime > MAX_INTERVAL:
-            self.dm.storeLuminance(self.id, timeStamp, v) 
-            self.previous = v
-            self.prevTime = timeStamp
+        """
+        try:
+            v = resp["data"]
+            timeStamp = resp["timeStamp"] 
+            if abs(v-self.previous) >= config["luminance_min_change"] or timeStamp - self.prevTime > MAX_INTERVAL:
+                self.dm.storeLuminance(self.id, timeStamp, v) 
+                self.previous = v
+                self.prevTime = timeStamp
+        except Exception as ex:
+            self.cbLog("warning", "processLuminance failed. Exception: " + str(type(ex)) + str(ex.args))
+        """
 
 class Power():
     def __init__(self, id):
@@ -368,7 +370,6 @@ class App(CbApp):
         self.devices = []
         self.devServices = [] 
         self.idToName = {} 
-        self.entryExitIDs = []
         self.hotDrinkIDs = []
         #CbApp.__init__ MUST be called
         CbApp.__init__(self, argv)
@@ -382,9 +383,6 @@ class App(CbApp):
                "status": "state",
                "state": self.state}
         self.sendManagerMessage(msg)
-
-    def onConcMessage(self, message):
-        self.client.receive(message)
 
     def onAdaptorData(self, message):
         """
@@ -431,14 +429,6 @@ class App(CbApp):
             for b in self.binary:
                 if b.id == self.idToName[message["id"]]:
                     b.processBinary(message)
-                    break
-            for n in self.entryExitIDs:
-                if n == message["id"]:
-                    self.entryExit.onChange(message["id"], message["timeStamp"], message["data"])
-                    break
-            for n in config["night_sensors"]:
-                if n == message["id"]:
-                    self.nightWander.onChange(message["id"], message["timeStamp"], message["data"])
                     break
         elif message["characteristic"] == "power":
             for b in self.power:
@@ -580,8 +570,34 @@ class App(CbApp):
                 idToName2[adtID] = friendly_name
                 self.idToName[adtID] = friendly_name.replace(" ", "_")
                 self.devices.append(adtID)
+        self.dm = DataManager(self.bridge_id, self.idToName)
         self.dm.cbLog = self.cbLog
+        self.dm.openSocket()
         self.setState("starting")
+
+class ServerProtocol(LineReceiver):
+    def __init__(self, processMsg):
+        self.processMsg = processMsg
+
+    def lineReceived(self, data):
+        self.processMsg(data)
+
+    def sendMsg(self, msg):
+        try:
+            self.sendLine(json.dumps(msg))
+        except:
+            logging.warning("%s Message not send: %s", ModuleName, self.id, msg)
+
+class ServerFactory(Factory):
+    def __init__(self, processMsg):
+        self.processMsg = processMsg
+
+    def buildProtocol(self, addr):
+        self.proto = ServerProtocol(self.processMsg)
+        return self.proto
+
+    def sendMsg(self, msg):
+        self.proto.sendMsg(msg)
 
 if __name__ == '__main__':
     App(sys.argv)
