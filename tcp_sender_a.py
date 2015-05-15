@@ -288,8 +288,7 @@ class Luminance():
         self.prevTime = time.time()
 
     def processLuminance(self, resp):
-        self.cbLog("debug", "processLuminance: " + self.id + " - " + str(resp))
-        """
+        #self.cbLog("debug", "processLuminance: " + self.id + " - " + str(resp))
         try:
             v = resp["data"]
             timeStamp = resp["timeStamp"] 
@@ -299,7 +298,6 @@ class Luminance():
                 self.prevTime = timeStamp
         except Exception as ex:
             self.cbLog("warning", "processLuminance failed. Exception: " + str(type(ex)) + str(ex.args))
-        """
 
 class Power():
     def __init__(self, id):
@@ -435,9 +433,6 @@ class App(CbApp):
                 if b.id == self.idToName[message["id"]]:
                     b.processPower(message)
                     break
-            if config["hot_drinks"]["enable"] == "True":
-                if message["id"] == self.hotDrinksID:
-                    self.hotDrinks.onChange(message["timeStamp"], message["data"])
         elif message["characteristic"] == "battery":
             for b in self.battery:
                 if b.id == self.idToName[message["id"]]:

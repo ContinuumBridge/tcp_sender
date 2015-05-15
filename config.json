@@ -1,9 +1,9 @@
 {
     "exe": "tcp_sender.py", 
     "name": "TCP Sender", 
-    "url": "https://github.com/ContinuumBridge/tcp_sender/archive/v1.0.0.tar.gz", 
+    "url": "https://github.com/ContinuumBridge/tcp_sender/archive/v1.0.1.tar.gz", 
     "app_resource": "/api/bridge/v1/app/26", 
-    "version": "1.0.0", 
+    "version": "1.0.1", 
     "provider": "ContinuumBridge", 
     "description": "Listens on a TCP socket and sends all data it receives to it"
 }
