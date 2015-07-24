@@ -81,8 +81,16 @@ class DataManager:
                 self.cbLog("warning", "Exception: " + str(type(ex)) + str(ex.args))
 
     def storeAccel(self, deviceID, timeStamp, a):
-        values = {"name": self.baseAddress + deviceID + "/accel",
-                  "points": [[int(timeStamp*1000), a[0], a[1], a[2]]]
+        values = {"name": self.baseAddress + deviceID + "/accel/x",
+                  "points": [[int(timeStamp*1000), a[0]]]
+                 }
+        self.storeValues(values)
+        values = {"name": self.baseAddress + deviceID + "/accel/y",
+                  "points": [[int(timeStamp*1000), a[1]]]
+                 }
+        self.storeValues(values)
+        values = {"name": self.baseAddress + deviceID + "/accel/z",
+                  "points": [[int(timeStamp*1000), a[2]]]
                  }
         self.storeValues(values)
 
@@ -112,14 +120,30 @@ class DataManager:
         self.storeValues(values, deviceID)
 
     def storeGyro(self, deviceID, timeStamp, v):
-        values = {"name": self.baseAddress + deviceID + "/gyro",
-                  "points": [[int(timeStamp*1000), v[0], v[1], v[2]]]
+        values = {"name": self.baseAddress + deviceID + "/gyro/x",
+                  "points": [[int(timeStamp*1000), v[0]]]
+                 }
+        self.storeValues(values)
+        values = {"name": self.baseAddress + deviceID + "/gyro/y",
+                  "points": [[int(timeStamp*1000), v[1]]]
+                 }
+        self.storeValues(values)
+        values = {"name": self.baseAddress + deviceID + "/gyro/z",
+                  "points": [[int(timeStamp*1000), v[2]]]
                  }
         self.storeValues(values)
 
     def storeMagnet(self, deviceID, timeStamp, v):
-        values = {"name": self.baseAddress + deviceID + "/gyro",
-                  "points": [[int(timeStamp*1000), v[0], v[1], v[2]]]
+        values = {"name": self.baseAddress + deviceID + "/magnet/x",
+                  "points": [[int(timeStamp*1000), v[0]]]
+                 }
+        self.storeValues(values)
+        values = {"name": self.baseAddress + deviceID + "/magnet/y",
+                  "points": [[int(timeStamp*1000), v[1]]]
+                 }
+        self.storeValues(values)
+        values = {"name": self.baseAddress + deviceID + "/magnet/z",
+                  "points": [[int(timeStamp*1000), v[2]]]
                  }
         self.storeValues(values)
 
