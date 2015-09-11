@@ -3,6 +3,7 @@
 # Copyright (C) ContinuumBridge Limited, 2015 - All Rights Reserved
 # Written by Peter Claydon
 #
+# To test: nc localhost 5003
 
 # Default values:
 config = {
@@ -12,10 +13,10 @@ config = {
     "irtemp_min_change": 0.5,
     "humidity": "True",
     "humidity_min_change": 0.2,
-    "buttons": "False",
-    "accel": "False",
+    "buttons": "True",
+    "accel": "True",
     "accel_min_change": 0.02,
-    "accel_polling_interval": 3.0,
+    "accel_polling_interval": 1.0,
     "gyro": "False",
     "gyro_min_change": 0.5,
     "gyro_polling_interval": 3.0,
