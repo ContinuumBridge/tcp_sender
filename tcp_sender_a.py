@@ -25,13 +25,14 @@ config = {
     "magnet_polling_interval": 3.0,
     "binary": "True",
     "luminance": "True",
-    "luminance_min_change": 1.0,
+    "luminance_min_change": 100.0,
     "power": "True",
     "power_min_change": 1.0,
     "battery": "True",
     "battery_min_change": 1.0,
     "connected": "True",
     "slow_polling_interval": 600.0,
+    "data_send_delay": 2.0,
     "TCPport": 5003
 }
 
@@ -47,14 +48,13 @@ from twisted.internet.protocol import Protocol, Factory
 from twisted.protocols.basic import LineReceiver
 import smtplib
 
-MAX_INTERVAL                      = 10*60 # Will post values after this even if they haven't changed
+MAX_INTERVAL                      = 60000 # Will post values after this even if they haven't changed (in 0.001 s)
 
 class DataManager:
     """ Managers data storage for all sensors """
     def __init__(self, bridge_id, idToName):
         self.idToName = idToName
         self.baseAddress = bridge_id + "/"
-        self.enable = False
 
     def openSocket(self):
         try:
@@ -69,17 +69,15 @@ class DataManager:
         self.cbLog("debug", "Data manager, onTCP. Message received: " + str(message))
 
     def storeValues(self, values):
-        if True:
-        #if self.enable:
-            try:
-                msg = {"m": "data",
-                       "d": values
-                       }
-                self.cbLog("debug", "storeValues. Sending: " + str(msg))
-                self.socFactory.sendMsg(msg)
-            except Exception as ex:
-                self.cbLog("warning", "DataManager storeValues, unable to send message on TCP socket")
-                self.cbLog("warning", "Exception: " + str(type(ex)) + str(ex.args))
+        try:
+            msg = {"m": "data",
+                   "d": values
+            }
+            self.cbLog("debug", "storeValues. Sending: " + str(msg))
+            self.socFactory.sendMsg(msg)
+        except Exception as ex:
+            self.cbLog("warning", "DataManager storeValues, unable to send message on TCP socket")
+            self.cbLog("warning", "Exception: " + str(type(ex)) + str(ex.args))
 
     def storeAccel(self, deviceID, timeStamp, a):
         values = {"name": self.baseAddress + deviceID + "/accel/x",
@@ -208,7 +206,7 @@ class TemperatureMeasure():
         self.prevTime = time.time()
 
     def processTemp (self, resp):
-        self.cbLog("debug", "processTemp: " + self.id + " - " + str(resp))
+        #self.cbLog("debug", "processTemp: " + self.id + " - " + str(resp))
         timeStamp = resp["timeStamp"] 
         temp = resp["data"]
         if abs(temp-self.prevTemp) >= config["temp_min_change"] or timeStamp - self.prevTime > MAX_INTERVAL:
@@ -279,7 +277,7 @@ class Humid():
         self.prevTime = time.time()
 
     def processHumidity (self, resp):
-        self.cbLog("debug", "processHumidity: " + self.id + " - " + str(resp))
+        #self.cbLog("debug", "processHumidity: " + self.id + " - " + str(resp))
         h = resp["data"]
         timeStamp = resp["timeStamp"] 
         if abs(self.previous - h) >= config["humidity_min_change"] or timeStamp - self.prevTime > MAX_INTERVAL:
@@ -316,6 +314,7 @@ class Luminance():
         #self.cbLog("debug", "processLuminance: " + self.id + " - " + str(resp))
         try:
             v = resp["data"]
+            #self.cbLog("debug", "processLuminance. v:" + str(v) + " previous: " + str(self.previous) + ", min_change: " + str(config["luminance_min_change"]))
             timeStamp = resp["timeStamp"] 
             if abs(v-self.previous) >= config["luminance_min_change"] or timeStamp - self.prevTime > MAX_INTERVAL:
                 self.dm.storeLuminance(self.id, timeStamp, v) 
